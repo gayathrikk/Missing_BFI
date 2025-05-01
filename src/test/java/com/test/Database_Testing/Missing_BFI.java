@@ -35,10 +35,11 @@ public class Missing_BFI {
     }
 
     @Test
-    public void displayMissingPositionIndexes() {
+    @Parameters("biosampleid")
+    public void displayMissingPositionIndexes(String biosampleid) {
         Scanner scanner = new Scanner(System.in);
-        System.out.print("Enter Biosample id: ");
-        String biosampleid = scanner.nextLine();  // Get user input from console
+        // System.out.print("Enter Biosample id: ");
+        // String biosampleid = scanner.nextLine();  // Get user input from console
 
         Set<Integer> retrievedIndexes = new HashSet<>();
         int endIndex = 0;
