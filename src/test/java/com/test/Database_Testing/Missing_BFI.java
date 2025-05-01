@@ -9,13 +9,11 @@ import java.util.Set;
 
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
-import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
 
 public class Missing_BFI {
 
     private Connection conn;
-
     private static final String URL = "jdbc:mysql://apollo2.humanbrain.in:3306/HBA_V2";
     private static final String USERNAME = "root";
     private static final String PASSWORD = "Health#123";
@@ -33,14 +31,21 @@ public class Missing_BFI {
     }
 
     @Test
-    @Parameters("biosampleid")
-    public void displayMissingPositionIndexes(String biosampleid) {
+    public void displayMissingPositionIndexes() {
+        String biosampleid = System.getProperty("biosampleid");
+
+        if (biosampleid == null || biosampleid.trim().isEmpty()) {
+            throw new RuntimeException("biosampleid system property is missing or empty.");
+        }
+
+        System.out.println("Running for biosampleid: " + biosampleid);
+
         Set<Integer> retrievedIndexes = new HashSet<>();
         int endIndex = 0;
         int missingCount = 0;
 
         try {
-            // Query to get the maximum positionindex
+            // Get max positionindex
             String maxQuery = "SELECT MAX(positionindex) AS maxIndex FROM section WHERE jp2Path LIKE ?";
             try (PreparedStatement stmt = conn.prepareStatement(maxQuery)) {
                 stmt.setString(1, "%/" + biosampleid + "/BFI/%");
@@ -51,7 +56,7 @@ public class Missing_BFI {
                 }
             }
 
-            // Query to fetch existing position indexes
+            // Get all existing indexes
             String query = "SELECT positionindex FROM section WHERE jp2Path LIKE ? ORDER BY positionindex ASC";
             try (PreparedStatement stmt = conn.prepareStatement(query)) {
                 stmt.setString(1, "%/" + biosampleid + "/BFI/%");
@@ -63,7 +68,7 @@ public class Missing_BFI {
                 }
             }
 
-            // Display missing indexes
+            // Print missing indexes
             System.out.println("Missing position indexes:");
             for (int i = 1; i <= endIndex; i++) {
                 if (!retrievedIndexes.contains(i)) {
