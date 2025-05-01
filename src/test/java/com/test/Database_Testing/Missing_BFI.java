@@ -6,17 +6,15 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.Scanner;
 
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
+import org.testng.annotations.Parameters;
 import org.testng.annotations.Test;
 
 public class Missing_BFI {
 
     private Connection conn;
-    private PreparedStatement stmt;
-    private ResultSet rs;
 
     private static final String URL = "jdbc:mysql://apollo2.humanbrain.in:3306/HBA_V2";
     private static final String USERNAME = "root";
@@ -37,32 +35,35 @@ public class Missing_BFI {
     @Test
     @Parameters("biosampleid")
     public void displayMissingPositionIndexes(String biosampleid) {
-         Set<Integer> retrievedIndexes = new HashSet<>();
+        Set<Integer> retrievedIndexes = new HashSet<>();
         int endIndex = 0;
         int missingCount = 0;
 
         try {
-            // Get the maximum positionindex from the database
-            String maxQuery = "SELECT MAX(positionindex) AS maxIndex FROM section WHERE jp2Path LIKE '%/" + biosampleid + "/BFI/%'";
-            stmt = conn.prepareStatement(maxQuery);
-            rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                endIndex = rs.getInt("maxIndex");
+            // Query to get the maximum positionindex
+            String maxQuery = "SELECT MAX(positionindex) AS maxIndex FROM section WHERE jp2Path LIKE ?";
+            try (PreparedStatement stmt = conn.prepareStatement(maxQuery)) {
+                stmt.setString(1, "%/" + biosampleid + "/BFI/%");
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        endIndex = rs.getInt("maxIndex");
+                    }
+                }
             }
 
-            // Query to fetch position indexes based on the user's input
-            String query = "SELECT positionindex FROM section WHERE jp2Path LIKE '%/" + biosampleid + "/BFI/%' ORDER BY positionindex ASC";
-            stmt = conn.prepareStatement(query);
-            rs = stmt.executeQuery();
-
-            // Store all retrieved position indexes
-            while (rs.next()) {
-                int posIndex = rs.getInt("positionindex");
-                retrievedIndexes.add(posIndex);
+            // Query to fetch existing position indexes
+            String query = "SELECT positionindex FROM section WHERE jp2Path LIKE ? ORDER BY positionindex ASC";
+            try (PreparedStatement stmt = conn.prepareStatement(query)) {
+                stmt.setString(1, "%/" + biosampleid + "/BFI/%");
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        int posIndex = rs.getInt("positionindex");
+                        retrievedIndexes.add(posIndex);
+                    }
+                }
             }
 
-            // Print missing position indexes and count
+            // Display missing indexes
             System.out.println("Missing position indexes:");
             for (int i = 1; i <= endIndex; i++) {
                 if (!retrievedIndexes.contains(i)) {
@@ -76,16 +77,12 @@ public class Missing_BFI {
         } catch (Exception e) {
             e.printStackTrace();
             throw new RuntimeException("Error executing query.");
-        } finally {
-            scanner.close();  // Close the scanner
         }
     }
 
     @AfterClass
     public void tearDown() {
         try {
-            if (rs != null) rs.close();
-            if (stmt != null) stmt.close();
             if (conn != null) conn.close();
             System.out.println("Database connection closed.");
         } catch (Exception e) {
