@@ -41,36 +41,35 @@ public class Missing_BFI {
         System.out.println("Running for biosampleid: " + biosampleid);
 
         Set<Integer> retrievedIndexes = new HashSet<>();
-        int endIndex = 0;
+        int actualEndIndex = 0;
         int missingCount = 0;
+        int gapThreshold = 50; // adjust as needed to detect jump to dummy records
 
         try {
-            // Get max positionindex
-            String maxQuery = "SELECT MAX(positionindex) AS maxIndex FROM section WHERE jp2Path LIKE ?";
-            try (PreparedStatement stmt = conn.prepareStatement(maxQuery)) {
-                stmt.setString(1, "%/" + biosampleid + "/BFI/%");
-                try (ResultSet rs = stmt.executeQuery()) {
-                    if (rs.next()) {
-                        endIndex = rs.getInt("maxIndex");
-                    }
-                }
-            }
-
-            // Get all existing indexes
+            // Get all position indexes sorted
             String query = "SELECT positionindex FROM section WHERE jp2Path LIKE ? ORDER BY positionindex ASC";
             try (PreparedStatement stmt = conn.prepareStatement(query)) {
                 stmt.setString(1, "%/" + biosampleid + "/BFI/%");
                 try (ResultSet rs = stmt.executeQuery()) {
+                    int prev = 0;
                     while (rs.next()) {
-                        int posIndex = rs.getInt("positionindex");
-                        retrievedIndexes.add(posIndex);
+                        int current = rs.getInt("positionindex");
+                        retrievedIndexes.add(current);
+
+                        if (prev != 0 && current - prev >= gapThreshold) {
+                            actualEndIndex = prev;
+                            break;
+                        }
+
+                        prev = current;
+                        actualEndIndex = current; // continue updating as long as no big gap
                     }
                 }
             }
 
             // Print missing indexes
-            System.out.println("Missing position indexes:");
-            for (int i = 1; i <= endIndex; i++) {
+            System.out.println("Missing position indexes (up to " + actualEndIndex + "):");
+            for (int i = 1; i <= actualEndIndex; i++) {
                 if (!retrievedIndexes.contains(i)) {
                     System.out.println(i);
                     missingCount++;
