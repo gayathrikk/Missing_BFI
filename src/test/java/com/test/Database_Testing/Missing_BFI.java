@@ -43,7 +43,6 @@ public class Missing_BFI {
         Set<Integer> retrievedIndexes = new HashSet<>();
         int actualEndIndex = 0;
         int missingCount = 0;
-        int gapThreshold = 50; // adjust as needed to detect jump to dummy records
 
         try {
             // Get all position indexes sorted
@@ -51,18 +50,13 @@ public class Missing_BFI {
             try (PreparedStatement stmt = conn.prepareStatement(query)) {
                 stmt.setString(1, "%/" + biosampleid + "/BFI/%");
                 try (ResultSet rs = stmt.executeQuery()) {
-                    int prev = 0;
                     while (rs.next()) {
                         int current = rs.getInt("positionindex");
                         retrievedIndexes.add(current);
 
-                        if (prev != 0 && current - prev >= gapThreshold) {
-                            actualEndIndex = prev;
-                            break;
+                        if (current > actualEndIndex) {
+                            actualEndIndex = current; // Set to the highest index found
                         }
-
-                        prev = current;
-                        actualEndIndex = current; // continue updating as long as no big gap
                     }
                 }
             }
