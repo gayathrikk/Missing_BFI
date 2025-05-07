@@ -52,10 +52,12 @@ public class Missing_BFI {
                 try (ResultSet rs = stmt.executeQuery()) {
                     while (rs.next()) {
                         int current = rs.getInt("positionindex");
-                        retrievedIndexes.add(current);
 
-                        if (current > actualEndIndex) {
-                            actualEndIndex = current; // Set to the highest index found
+                        if (current < 10000) {  // Ignore dummy values 10000 and above
+                            retrievedIndexes.add(current);
+                            if (current > actualEndIndex) {
+                                actualEndIndex = current; // Update max only if less than 10000
+                            }
                         }
                     }
                 }
